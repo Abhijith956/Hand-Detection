@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import dj_database_url
+from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "detection",
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 MIDDLEWARE = [
@@ -62,11 +64,12 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
-
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-# ]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 TEMPLATES = [
     {
@@ -171,6 +174,12 @@ MAILERS = {
 
 
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "detection.authentication.CookieJWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
     ],
@@ -178,3 +187,29 @@ REST_FRAMEWORK = {
         "anon": "20/min",
     },
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+
+SESSION_COOKIE_HTTPONLY = True
+
+if DEBUG:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    CSRF_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SAMESITE = "Lax"
+else:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SAMESITE = "None"
+    
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
